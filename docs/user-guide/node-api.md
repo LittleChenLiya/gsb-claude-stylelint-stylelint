@@ -304,3 +304,46 @@ You can also pass the following subset of the [options that you would normally p
 - `config`
 - `configBasedir`
 - `customSyntax`
+
+## Reporting the config resolution for a file
+
+If you want to know not only _what_ the effective configuration for a file is but also _where each part of it comes from_, you can use the `reportConfig()` function. It resolves the configuration for exactly one file and returns a `Promise` that resolves with a config resolution report:
+
+```js
+const report = await stylelint.reportConfig({
+  configFile: ".stylelintrc.json",
+  files: ["src/index.css"]
+});
+
+// report => {
+//   version: 1,
+//   filePath: '/project/src/index.css',
+//   configFile: '/project/.stylelintrc.json',
+//   loadOrder: [ { filepath: '/project/.stylelintrc.json', via: 'configFile option' }, … ],
+//   extends: [ { from: '…', to: '…', specifier: './base.json' } ],
+//   overrides: [ { index: 0, files: ['*.scss'], matched: false, configFile: '…' } ],
+//   plugins: [ { name: '…', rules: ['plugin/rule'], declaredIn: […] } ],
+//   rules: {
+//     'block-no-empty': {
+//       status: 'disabled',
+//       value: null,
+//       source: { type: 'config', filepath: '/project/base.json' },
+//       history: [ … ],
+//     },
+//     …
+//   },
+//   unknownRules: [],
+// }
+```
+
+The report is recorded along the actual load order: a rule set to `null` is reported with the status `"disabled"` (a rule that is not configured anywhere is absent), and every rule value — including a whole options array — is attributed to the single source that won it. See [Inspecting the configuration resolution](configure.md#inspecting-the-configuration-resolution) for a complete example.
+
+You can pass the following subset of the [options that you would normally pass to `lint()`](#options):
+
+- `cwd`
+- `code`
+- `config`
+- `configBasedir`
+- `configFile`
+- `files`
+- `globbyOptions`

@@ -1,0 +1,6 @@
+{
+	"extends": "./circular-b.json",
+	"rules": {
+		"block-no-empty": true
+	}
+}

@@ -100,6 +100,10 @@ Path of file to write a report. Stylelint outputs the report to the specified `f
 
 Print the configuration for the given input path. Globs are unsupported.
 
+### `--report-config`
+
+Print the configuration resolution report for the given input path: the load order of configuration sources, the `extends` chain, the applied `overrides`, and the winning source of every rule value. Globs are unsupported. [More info](configure.md#inspecting-the-configuration-resolution).
+
 ### `--quiet, -q`
 
 Only register problems for rules with an "error"-level severity (ignore "warning"-level). [More info](options.md#quiet).

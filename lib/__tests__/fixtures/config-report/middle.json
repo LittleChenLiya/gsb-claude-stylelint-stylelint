@@ -1,0 +1,6 @@
+{
+	"extends": "./base.json",
+	"rules": {
+		"block-no-empty": null
+	}
+}

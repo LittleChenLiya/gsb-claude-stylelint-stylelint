@@ -1,0 +1,14 @@
+{
+	"extends": "./middle.json",
+	"rules": {
+		"color-no-invalid-hex": true
+	},
+	"overrides": [
+		{
+			"files": ["*.scss"],
+			"rules": {
+				"color-named": "always"
+			}
+		}
+	]
+}

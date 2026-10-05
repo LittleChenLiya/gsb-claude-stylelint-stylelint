@@ -718,6 +718,81 @@ Patterns are applied against the file path relative to the directory of the conf
 
 Overrides have higher precedence than regular configurations. Multiple overrides within the same config are applied in order. That is, the last override block in a config file always has the highest precedence.
 
+## Inspecting the configuration resolution
+
+When configurations are layered with `extends` and `overrides`, it can be hard to tell where a rule value comes from. The config resolution report shows, along the actual load order:
+
+- the configuration sources in the order they were loaded (`loadOrder`)
+- the `extends` edges between them (`extends`)
+- every `overrides` block and whether it matched the file (`overrides`)
+- the winning source of every rule value (`rules`), including the whole options array
+- the resolved plugins and the rules they provide (`plugins`)
+- configured rules that are unknown to Stylelint and its plugins (`unknownRules`)
+
+A rule set to `null` is reported with the status `"disabled"`, while a rule that is not configured anywhere is simply absent from the report. The report is recorded while the configuration is loaded, so no configuration file is read twice and no plugin is executed an extra time. Circular `extends` chains are rejected with the chain of files, e.g. `Circular configuration extends detected: a.json -> b.json -> a.json`.
+
+For example, given three configurations where a base config enables two rules, a middle config extends it and turns one of them off, and a root config extends the middle one and adds a file override:
+
+```json
+// base.json
+{
+  "rules": {
+    "block-no-empty": true,
+    "color-named": ["never", { "severity": "warning" }]
+  }
+}
+```
+
+```json
+// middle.json
+{
+  "extends": "./base.json",
+  "rules": {
+    "block-no-empty": null
+  }
+}
+```
+
+```json
+// root.json
+{
+  "extends": "./middle.json",
+  "rules": {
+    "color-no-invalid-hex": true
+  },
+  "overrides": [{ "files": ["*.scss"], "rules": { "color-named": "always" } }]
+}
+```
+
+Run the following Node command:
+
+```shell
+node ./node_modules/stylelint/bin/stylelint.mjs --report-config --config root.json src/index.css
+```
+
+The report attributes every rule value to the source that won it, for example:
+
+```json
+{
+  "rules": {
+    "block-no-empty": {
+      "status": "disabled",
+      "value": null,
+      "source": { "type": "config", "filepath": "/project/middle.json" }
+    },
+    "color-named": {
+      "status": "enabled",
+      "value": ["never", { "severity": "warning" }],
+      "source": { "type": "config", "filepath": "/project/base.json" }
+    }
+  }
+}
+```
+
+Here `block-no-empty` is disabled by `middle.json` (the child config wins over the parent `base.json`), and the whole `color-named` options array belongs to the single source `base.json`. For a `src/index.scss` file, the `overrides` entry would show `"matched": true` and `color-named` would report the `*.scss` override block as its source.
+
+You can also get the report programmatically with the [`reportConfig()`](node-api.md#reporting-the-config-resolution-for-a-file) Node.js API.
+
 ## `processors`
 
 > [!WARNING]

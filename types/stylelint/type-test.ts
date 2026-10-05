@@ -87,6 +87,43 @@ stylelint
 	})
 	.then((config) => stylelint.lint({ config }));
 
+stylelint.reportConfig({ files: ['path'] }).then((report) => {
+	if (report === null) return;
+
+	report.version satisfies 1;
+	report.filePath satisfies string | null;
+	report.configFile satisfies string | null;
+	report.loadOrder satisfies Array<{ filepath: string | null; via: string }>;
+	report.extends satisfies Array<{ from: string | null; to: string; specifier: string }>;
+	report.overrides satisfies Array<{
+		index: number;
+		files: string[];
+		matched: boolean;
+		configFile: string | undefined;
+	}>;
+	report.plugins satisfies Array<{
+		name: string;
+		rules: string[];
+		declaredIn: stylelint.ConfigRuleSource[];
+	}>;
+	report.unknownRules satisfies string[];
+
+	for (const rule of Object.values(report.rules)) {
+		rule.status satisfies 'enabled' | 'disabled';
+		rule.source satisfies stylelint.ConfigRuleSource;
+		rule.history satisfies Array<{ value: unknown; source: stylelint.ConfigRuleSource }>;
+	}
+});
+
+stylelint.reportConfig({
+	cwd: 'path',
+	config: { rules: {} },
+	configBasedir: 'path',
+	configFile: 'path',
+	files: ['path'],
+	globbyOptions: { cwd: 'path' },
+});
+
 'json' satisfies FormatterType;
 
 const ruleName = 'sample-rule';

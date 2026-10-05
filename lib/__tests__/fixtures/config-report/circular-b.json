@@ -1,0 +1,6 @@
+{
+	"extends": "./circular-a.json",
+	"rules": {
+		"color-no-invalid-hex": true
+	}
+}

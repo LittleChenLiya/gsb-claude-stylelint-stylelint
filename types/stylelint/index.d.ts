@@ -298,7 +298,74 @@ declare namespace stylelint {
 
 	/** @internal */
 	export type CosmiconfigResult =
-		(ReturnType<CosmiconfigTransformSync> & { config: Config }) | null;
+		| (ReturnType<CosmiconfigTransformSync> & {
+				config: Config;
+				configResolutionReport?: ConfigResolutionReport;
+		  })
+		| null;
+
+	/**
+	 * The source of a rule value within a configuration resolution.
+	 */
+	export type ConfigRuleSource = {
+		/**
+		 * The kind of source: a config file, an `overrides` block, an inline
+		 * object in an `extends` array, or the `config` option.
+		 */
+		type: 'config' | 'override' | 'inline' | 'option';
+		/** The config file the value comes from, if any. */
+		filepath?: string | undefined;
+		/** The index of the `overrides` block, for `override` sources. */
+		index?: number | undefined;
+		/** The glob patterns of the `overrides` block, for `override` sources. */
+		files?: string[] | undefined;
+	};
+
+	/**
+	 * A report describing how the configuration for a file was resolved.
+	 * It is recorded along the actual load order, not derived from the
+	 * final merged configuration.
+	 */
+	export type ConfigResolutionReport = {
+		/** The report format version. */
+		version: 1;
+		/** The file the configuration was resolved for. */
+		filePath: string | null;
+		/** The root configuration file, or `null` for a `config` option. */
+		configFile: string | null;
+		/** Configuration sources in the actual load order. */
+		loadOrder: Array<{ filepath: string | null; via: string }>;
+		/** The "extends" edges, in resolution order. */
+		extends: Array<{ from: string | null; to: string; specifier: string }>;
+		/** Every "overrides" block and whether it matched the file. */
+		overrides: Array<{
+			index: number;
+			files: string[];
+			matched: boolean;
+			configFile: string | undefined;
+		}>;
+		/** Resolved plugins, the rules they provide, and where they were declared. */
+		plugins: Array<{
+			name: string;
+			rules: string[];
+			declaredIn: ConfigRuleSource[];
+		}>;
+		/**
+		 * Every configured rule with its winning value and source. A rule set
+		 * to `null` has the status `"disabled"`; a rule that is not configured
+		 * at all is simply absent (missing).
+		 */
+		rules: {
+			[ruleName: string]: {
+				status: 'enabled' | 'disabled';
+				value: unknown;
+				source: ConfigRuleSource;
+				history: Array<{ value: unknown; source: ConfigRuleSource }>;
+			};
+		};
+		/** Configured rules that are neither core rules nor provided by plugins. */
+		unknownRules: string[];
+	};
 
 	/** @internal */
 	export type DisabledRange = {
@@ -1610,6 +1677,7 @@ declare namespace stylelint {
 	 */
 	export type CompiledOverride = {
 		configOverrides: Omit<ConfigOverride, 'files'>;
+		files: string[];
 		matches: (filePath: string) => boolean;
 	};
 
@@ -1668,6 +1736,22 @@ declare namespace stylelint {
 			filePath: string,
 			options?: Pick<LinterOptions, 'cwd' | 'config' | 'configBasedir' | 'configFile'>,
 		) => Promise<Config | undefined>;
+
+		/**
+		 * Reports how the configuration for a given file is resolved: the load
+		 * order of configuration sources, the "extends" chain, the applied
+		 * "overrides", and the winning source of every rule value. Resolves to
+		 * `null` if no config is found.
+		 *
+		 * @param options - The options to use when creating the Stylelint instance.
+		 * @returns A config resolution report or `null`.
+		 */
+		reportConfig: (
+			options: Pick<
+				LinterOptions,
+				'cwd' | 'code' | 'config' | 'configBasedir' | 'configFile' | 'files' | 'globbyOptions'
+			>,
+		) => Promise<ConfigResolutionReport | null>;
 
 		/**
 		 * Utility functions.

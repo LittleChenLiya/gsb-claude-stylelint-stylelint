@@ -1,0 +1,8 @@
+{
+	"plugins": ["./plugin-counter.mjs"],
+	"rules": {
+		"plugin/counter": true,
+		"plugin/unknown-thing": true,
+		"block-no-empty": true
+	}
+}
