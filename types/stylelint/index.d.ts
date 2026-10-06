@@ -327,6 +327,7 @@ declare namespace stylelint {
 		ruleMetadata: { [ruleName: string]: Partial<RuleMeta> };
 		rangesOfComputedEditInfos: Array<EditInfo['range']>;
 		fixersData: { [ruleName: string]: number };
+		fixPlan: PlannedFix[];
 		quiet?: boolean;
 		quietDeprecationWarnings?: boolean;
 		disabledRanges: DisabledRangeObject;
@@ -1268,6 +1269,14 @@ declare namespace stylelint {
 		name: string;
 		reason: string;
 		source: string;
+	};
+
+	/** @internal */
+	export type PlannedFix = EditInfo & {
+		/**
+		 * The name of the rule that produced the fix.
+		 */
+		ruleName: string;
 	};
 
 	export type EditInfo = {
