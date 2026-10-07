@@ -1,0 +1,6 @@
+/* stylelint-disable block-no-empty */
+a {}
+/* stylelint-disable no-such-rule */
+b { color: red; }
+/* stylelint-disable */
+c { color: blue; }
