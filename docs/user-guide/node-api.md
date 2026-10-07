@@ -304,3 +304,107 @@ You can also pass the following subset of the [options that you would normally p
 - `config`
 - `configBasedir`
 - `customSyntax`
+- `configFile`
+
+## Resolving the config resolution report for a file
+
+If you want to know _why_ a rule has its value — which config file, `extends` layer, or `overrides` block last set it — you can use the `resolveConfigReport()` function. Given a file path, it returns a `Promise` that resolves with an explicit resolution report:
+
+```js
+const report = await stylelint.resolveConfigReport(filePath);
+```
+
+The report is recorded while the configuration is actually loaded and merged. It is not reconstructed from the final config, and producing it neither reads config files a second time nor executes plugins:
+
+- `files` and `extends` list the config files and `extends` edges in actual loading order
+- `overrides` lists every `overrides` block evaluated for the file and whether it matched
+- `plugins` lists each plugin contribution and the config file it came from
+- `rules.enabled` and `rules.disabled` attribute every rule to its winning source. A rule set to `null` or `false` appears under `disabled`; a rule that is never mentioned anywhere is simply absent ("missing"). Each entry keeps the raw value as written — an options array is attributed as a whole to the same source — and a `history` of every assignment in loading order, of which the last one won
+
+Circular `extends` chains are rejected when the config is read, with an error that names the whole chain, e.g. `Circular "extends" detected: a.config.mjs -> b.config.mjs -> a.config.mjs`.
+
+For example, given three configs:
+
+```js
+// base.config.mjs
+export default {
+  rules: {
+    "block-no-empty": true,
+    "color-hex-length": ["long", { severity: "warning" }]
+  }
+};
+```
+
+```js
+// mid.config.mjs
+export default {
+  extends: ["./base.config.mjs"],
+  rules: {
+    "block-no-empty": null
+  }
+};
+```
+
+```js
+// stylelint.config.mjs
+export default {
+  extends: ["./mid.config.mjs"],
+  overrides: [
+    {
+      files: ["*.scss"],
+      rules: { "max-nesting-depth": 2 }
+    }
+  ]
+};
+```
+
+Running:
+
+```shell
+node --input-type=module -e "
+import stylelint from 'stylelint';
+const report = await stylelint.resolveConfigReport('src/app.scss');
+console.log(JSON.stringify(report, null, 2));
+"
+```
+
+prints a report whose relevant parts are:
+
+```json
+{
+  "extends": [
+    { "from": "<cwd>/stylelint.config.mjs", "to": "<cwd>/mid.config.mjs" },
+    { "from": "<cwd>/mid.config.mjs", "to": "<cwd>/base.config.mjs" }
+  ],
+  "overrides": [
+    {
+      "file": "<cwd>/stylelint.config.mjs",
+      "index": 0,
+      "files": ["*.scss"],
+      "matched": true
+    }
+  ],
+  "rules": {
+    "enabled": {
+      "color-hex-length": {
+        "source": { "file": "<cwd>/base.config.mjs" },
+        "value": ["long", { "severity": "warning" }]
+      },
+      "max-nesting-depth": {
+        "source": { "file": "<cwd>/stylelint.config.mjs", "overrideIndex": 0 },
+        "value": 2
+      }
+    },
+    "disabled": {
+      "block-no-empty": {
+        "source": { "file": "<cwd>/mid.config.mjs" },
+        "value": null
+      }
+    }
+  }
+}
+```
+
+Note how `block-no-empty` is attributed to `mid.config.mjs` — the child config that turned it off — even though `base.config.mjs` turned it on, and how the `max-nesting-depth` rule is attributed to the matching `overrides` block.
+
+If a configuration cannot be found for a file, `resolveConfigReport()` behaves like `resolveConfig()`. It accepts the same subset of options: `cwd`, `config`, `configBasedir` and `configFile`.
